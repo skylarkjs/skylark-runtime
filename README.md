@@ -1,2 +1,2 @@
-# skylark-requirejs-plugins
+# skylark-requirejs
 The skylark requirejs.
