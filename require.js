@@ -1863,6 +1863,12 @@ var requirejs, require, define;
         return req(config);
     };
 
+    // for sync require , by liwenfeng
+    req.get = function(context, id, relMap, localRequire) {
+            context.intakeDefines(true);
+            return context.defined[id];
+    };
+
     /**
      * Execute something after the current tick
      * of the event loop. Override for other envs
