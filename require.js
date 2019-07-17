@@ -1468,11 +1468,12 @@ var requirejs, require, define;
                         id = map.id;
 
                         if (!hasProp(defined, id)) {
-                            return onError(makeError('notloaded', 'Module name "' +
-                                        id +
-                                        '" has not been loaded yet for context: ' +
-                                        contextName +
-                                        (relMap ? '' : '. Use require([])')));
+                            context.intakeDefines(true); // added by lwf
+                            //return onError(makeError('notloaded', 'Module name "' +
+                            //            id +
+                            //            '" has not been loaded yet for context: ' +
+                            //            contextName +
+                            //            (relMap ? '' : '. Use require([])')));
                         }
                         return defined[id];
                     }
@@ -1863,11 +1864,11 @@ var requirejs, require, define;
         return req(config);
     };
 
-    // for sync require , by liwenfeng
-    req.get = function(context, id, relMap, localRequire) {
-            context.intakeDefines(true);
-            return context.defined[id];
-    };
+    // for sync require , by lwf
+    //req.get = function(context, id, relMap, localRequire) {
+    //        context.intakeDefines(true);
+    //        return context.defined[makeModuleMap(id, relMap, false, true)];
+    //};
 
     /**
      * Execute something after the current tick
