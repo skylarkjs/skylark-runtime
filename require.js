@@ -781,6 +781,7 @@ var requirejs, require, define;
                 //or could have been previously marked as enabled. However,
                 //the dependencies are not known until init is called. So
                 //if enabled previously, now trigger dependencies as enabled.
+                
                 if (options.enabled || this.enabled) {
                     //Enable this module and dependencies.
                     //Will call this.check()
@@ -2117,14 +2118,15 @@ var requirejs, require, define;
         });
     }
 
+    // modified by lwf
     /**
      * The function that handles definitions of modules. Differs from
      * require() in that a string for the module should be the first argument,
      * and the function to execute after dependencies are loaded should
      * return a value to define the module corresponding to the first argument's
      * name.
-     */
-    define = function (name, deps, callback) {
+     */ 
+    var _define = function (name, deps, callback) {
         var node, context;
 
         //Allow for anonymous modules
@@ -2189,10 +2191,25 @@ var requirejs, require, define;
         } else {
             globalDefQueue.push([name, deps, callback]);
         }
+
+        return name;
     };
 
+    define = function (name, deps, callback) {
+        name = _define(name,deps,callback);
+        if (name && define.enable) {
+            try {
+                require(name);
+            } catch (e) {
+                console.warn(e);
+            }            
+        }
+    };
+ 
+
     define.amd = {
-        jQuery: true
+        jQuery: true,
+        enable: false
     };
 
     /**
