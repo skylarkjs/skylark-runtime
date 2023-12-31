@@ -1,0 +1,3 @@
+
+}(globalThis));
+module.exports = skyrt;

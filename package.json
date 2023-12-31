@@ -1,7 +1,7 @@
 {
-  "name": "slax-requirejs",
+  "name": "skylark-runtime",
   "version": "0.9.0",
-  "description": "The skylark module loader.",
+  "description": "The skylarkjs runtime.",
   "scripts": {
   },
 
@@ -9,6 +9,7 @@
     "skylark",
     "requirejs"
   ],
+  "main": "./dist/node/skylark-runtime",
   "author": "Hudaokeji Co.,Ltd",
   "dependencies": { 
   },

@@ -1,18 +1,10 @@
-/** vim: et:ts=4:sw=4:sts=4
- * @license RequireJS 2.1.22 Copyright (c) 2010-2015, The Dojo Foundation All Rights Reserved.
- * Available via the MIT or new BSD license.
- * see: http://github.com/jrburke/requirejs for details
- */
-//Not using strict: uneven strict support in browsers, #392, and causes
-//problems with requirejs.exec()/transpiler plugins that may not be strict.
-/*jslint regexp: true, nomen: true, sloppy: true */
-/*global window, navigator, document, importScripts, setTimeout, opera */
 
-var requirejs, require, define;
+var skyrt={}, require, define;
 (function (global) {
-    var req, s, head, baseElement, dataMain, src,
-        interactiveScript, currentlyAddingScript, mainScript, subPath,
-        version = '2.1.22',
+
+    var req, s, 
+        ///head, baseElement, dataMain, src,interactiveScript, currentlyAddingScript, mainScript, subPath,
+        version = '1.0.0',
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
         // added by liwenfeng 2016/03/12 start 
@@ -24,23 +16,24 @@ var requirejs, require, define;
         ostring = op.toString,
         hasOwn = op.hasOwnProperty,
         ap = Array.prototype,
-        isBrowser = !!(typeof window !== 'undefined' && typeof navigator !== 'undefined' && window.document),
-        isWebWorker = !isBrowser && typeof importScripts !== 'undefined',
+        ///isBrowser = !!(typeof window !== 'undefined' && typeof navigator !== 'undefined' && window.document),
+        ///isWebWorker = !isBrowser && typeof importScripts !== 'undefined',
         //PS3 indicates loaded and complete, but need to wait for complete
         //specifically. Sequence is 'loading', 'loaded', execution,
         // then 'complete'. The UA check is unfortunate, but not sure how
         //to feature test w/o causing perf issues.
-        readyRegExp = isBrowser && navigator.platform === 'PLAYSTATION 3' ?
-                      /^complete$/ : /^(complete|loaded)$/,
+        ///readyRegExp = isBrowser && navigator.platform === 'PLAYSTATION 3' ?
+        ///              /^complete$/ : /^(complete|loaded)$/,
         defContextName = '_',
         //Oh the tragedy, detecting opera. See the usage of isOpera for reason.
-        isOpera = typeof opera !== 'undefined' && opera.toString() === '[object Opera]',
+        ///isOpera = typeof opera !== 'undefined' && opera.toString() === '[object Opera]',
         contexts = {},
         cfg = {},
-        globalDefQueue = [],
-        useInteractive = false;
+        globalDefQueue = [];
+        ///useInteractive = false;
 
-    function isFunction(it) {
+
+function isFunction(it) {
         return ostring.call(it) === '[object Function]';
     }
 
@@ -135,10 +128,6 @@ var requirejs, require, define;
         };
     }
 
-    function scripts() {
-        return document.getElementsByTagName('script');
-    }
-
     function defaultOnError(err) {
         throw err;
     }
@@ -174,31 +163,10 @@ var requirejs, require, define;
         return e;
     }
 
-    if (typeof define !== 'undefined') {
-        //If a define is already in play via another AMD loader,
-        //do not overwrite.
-        return;
-    }
 
-    if (typeof requirejs !== 'undefined') {
-        if (isFunction(requirejs)) {
-            //Do not overwrite an existing requirejs instance.
-            return;
-        }
-        cfg = requirejs;
-        requirejs = undefined;
-    }
-
-    //Allow for a require config object
-    if (typeof require !== 'undefined' && !isFunction(require)) {
-        //assume it is a config object.
-        cfg = require;
-        require = undefined;
-    }
 
     function newContext(contextName) {
-        var inCheckLoaded, Module, context, handlers,
-            checkLoadedTimeoutId,
+        var Module, context, handlers,
             config = {
                 //Defaults. Do not set a default for map
                 //config to speed up normalize(), which
@@ -636,93 +604,6 @@ var requirejs, require, define;
             }
         }
 
-        function checkLoaded() {
-            var err, usingPathFallback,
-                waitInterval = config.waitSeconds * 1000,
-                //It is possible to disable the wait interval by using waitSeconds of 0.
-                expired = waitInterval && (context.startTime + waitInterval) < new Date().getTime(),
-                noLoads = [],
-                reqCalls = [],
-                stillLoading = false,
-                needCycleCheck = true;
-
-            //Do not bother if this call was a result of a cycle break.
-            if (inCheckLoaded) {
-                return;
-            }
-
-            inCheckLoaded = true;
-
-            //Figure out the state of all the modules.
-            eachProp(enabledRegistry, function (mod) {
-                var map = mod.map,
-                    modId = map.id;
-
-                //Skip things that are not enabled or in error state.
-                if (!mod.enabled) {
-                    return;
-                }
-
-                if (!map.isDefine) {
-                    reqCalls.push(mod);
-                }
-
-                if (!mod.error) {
-                    //If the module should be executed, and it has not
-                    //been inited and time is up, remember it.
-                    if (!mod.inited && expired) {
-                        if (hasPathFallback(modId)) {
-                            usingPathFallback = true;
-                            stillLoading = true;
-                        } else {
-                            noLoads.push(modId);
-                            removeScript(modId);
-                        }
-                    } else if (!mod.inited && mod.fetched && map.isDefine) {
-                        stillLoading = true;
-                        if (!map.prefix) {
-                            //No reason to keep looking for unfinished
-                            //loading. If the only stillLoading is a
-                            //plugin resource though, keep going,
-                            //because it may be that a plugin resource
-                            //is waiting on a non-plugin cycle.
-                            return (needCycleCheck = false);
-                        }
-                    }
-                }
-            });
-
-            if (expired && noLoads.length) {
-                //If wait time expired, throw error of unloaded modules.
-                err = makeError('timeout', 'Load timeout for modules: ' + noLoads, null, noLoads);
-                err.contextName = context.contextName;
-                return onError(err);
-            }
-
-            //Not expired, check for a cycle.
-            if (needCycleCheck) {
-                each(reqCalls, function (mod) {
-                    breakCycle(mod, {}, {});
-                });
-            }
-
-            //If still waiting on loads, and the waiting load is something
-            //other than a plugin resource, or there are still outstanding
-            //scripts, then just try back later.
-            if ((!expired || usingPathFallback) && stillLoading) {
-                //Something is still waiting to load. Wait for it, but only
-                //if a timeout is not already in effect.
-                if ((isBrowser || isWebWorker) && !checkLoadedTimeoutId) {
-                    checkLoadedTimeoutId = setTimeout(function () {
-                        checkLoadedTimeoutId = 0;
-                        checkLoaded();
-                    }, 50);
-                }
-            }
-
-            inCheckLoaded = false;
-        }
-
         Module = function (map) {
             this.events = getOwn(undefEvents, map.id) || {};
             this.map = map;
@@ -1043,8 +924,8 @@ var requirejs, require, define;
                     load.fromText = bind(this, function (text, textAlt) {
                         /*jslint evil: true */
                         var moduleName = map.name,
-                            moduleMap = makeModuleMap(moduleName),
-                            hasInteractive = useInteractive;
+                            moduleMap = makeModuleMap(moduleName);
+                            ///hasInteractive = useInteractive;
 
                         //As of 2.1.0, support just passing the text, to reinforce
                         //fromText only being called once per resource. Still
@@ -1056,9 +937,9 @@ var requirejs, require, define;
 
                         //Turn off interactive script matching for IE for any define
                         //calls in the text, then turn it back on at the end.
-                        if (hasInteractive) {
-                            useInteractive = false;
-                        }
+                        ///if (hasInteractive) {
+                        ///    useInteractive = false;
+                        ///}
 
                         //Prime the system by creating a module instance for
                         //it.
@@ -1079,9 +960,9 @@ var requirejs, require, define;
                                              [id]));
                         }
 
-                        if (hasInteractive) {
-                            useInteractive = true;
-                        }
+                        ///if (hasInteractive) {
+                        ///    useInteractive = true;
+                        ///}
 
                         //Mark this as a dependency for the plugin
                         //resource
@@ -1224,6 +1105,8 @@ var requirejs, require, define;
             }
         };
 
+
+
         function callGetModule(args) {
             //Skip modules already defined.
             if (!hasProp(defined, args[0])) {
@@ -1231,42 +1114,96 @@ var requirejs, require, define;
             }
         }
 
-        function removeListener(node, func, name, ieName) {
-            //Favor detachEvent because of IE9
-            //issue, see attachEvent/addEventListener comment elsewhere
-            //in this file.
-            if (node.detachEvent && !isOpera) {
-                //Probably IE. If not it will throw an error, which will be
-                //useful to know.
-                if (ieName) {
-                    node.detachEvent(ieName, func);
-                }
-            } else {
-                node.removeEventListener(name, func, false);
+
+        var inCheckLoaded,checkLoadedTimeoutId;
+
+        function checkLoaded() {
+            var err, usingPathFallback,
+                waitInterval = config.waitSeconds * 1000,
+                //It is possible to disable the wait interval by using waitSeconds of 0.
+                expired = waitInterval && (context.startTime + waitInterval) < new Date().getTime(),
+                noLoads = [],
+                reqCalls = [],
+                stillLoading = false,
+                needCycleCheck = true;
+
+            //Do not bother if this call was a result of a cycle break.
+            if (inCheckLoaded) {
+                return;
             }
+
+            inCheckLoaded = true;
+
+            //Figure out the state of all the modules.
+            eachProp(enabledRegistry, function (mod) {
+                var map = mod.map,
+                    modId = map.id;
+
+                //Skip things that are not enabled or in error state.
+                if (!mod.enabled) {
+                    return;
+                }
+
+                if (!map.isDefine) {
+                    reqCalls.push(mod);
+                }
+
+                if (!mod.error) {
+                    //If the module should be executed, and it has not
+                    //been inited and time is up, remember it.
+                    if (!mod.inited && expired) {
+                        if (hasPathFallback(modId)) {
+                            usingPathFallback = true;
+                            stillLoading = true;
+                        } else {
+                            noLoads.push(modId);
+                            removeScript(modId);
+                        }
+                    } else if (!mod.inited && mod.fetched && map.isDefine) {
+                        stillLoading = true;
+                        if (!map.prefix) {
+                            //No reason to keep looking for unfinished
+                            //loading. If the only stillLoading is a
+                            //plugin resource though, keep going,
+                            //because it may be that a plugin resource
+                            //is waiting on a non-plugin cycle.
+                            return (needCycleCheck = false);
+                        }
+                    }
+                }
+            });
+
+            if (expired && noLoads.length) {
+                //If wait time expired, throw error of unloaded modules.
+                err = makeError('timeout', 'Load timeout for modules: ' + noLoads, null, noLoads);
+                err.contextName = context.contextName;
+                return onError(err);
+            }
+
+            //Not expired, check for a cycle.
+            if (needCycleCheck) {
+                each(reqCalls, function (mod) {
+                    breakCycle(mod, {}, {});
+                });
+            }
+
+            //If still waiting on loads, and the waiting load is something
+            //other than a plugin resource, or there are still outstanding
+            //scripts, then just try back later.
+            ///if ((!expired || usingPathFallback) && stillLoading) {
+            ///    //Something is still waiting to load. Wait for it, but only
+            ///    //if a timeout is not already in effect.
+            ///    if ((isBrowser || isWebWorker) && !checkLoadedTimeoutId) {
+            ///        checkLoadedTimeoutId = setTimeout(function () {
+            ///            checkLoadedTimeoutId = 0;
+            ///            checkLoaded();
+            ///        }, 50);
+            ///    }
+            ///}
+
+            inCheckLoaded = false;
         }
 
-        /**
-         * Given an event from a script node, get the requirejs info from it,
-         * and then removes the event listeners on the node.
-         * @param {Event} evt
-         * @returns {Object}
-         */
-        function getScriptData(evt) {
-            //Using currentTarget instead of target for Firefox 2.0's sake. Not
-            //all old browsers will be supported, but this one was easy enough
-            //to support and still makes sense.
-            var node = evt.currentTarget || evt.srcElement;
-
-            //Remove the listeners once here.
-            removeListener(node, context.onScriptLoad, 'load', 'onreadystatechange');
-            removeListener(node, context.onScriptError, 'error');
-
-            return {
-                node: node,
-                id: node && node.getAttribute('data-requiremodule')
-            };
-        }
 
         function intakeDefines(enabled) { // add enabled argument  by lwf
 
@@ -1505,7 +1442,7 @@ var requirejs, require, define;
                 }
 
                 mixin(localRequire, {
-                    isBrowser: isBrowser,
+                    ///isBrowser: isBrowser,
 
                     /**
                      * Converts a module name + .extension into an URL path.
@@ -1742,66 +1679,10 @@ var requirejs, require, define;
              */
             execCb: function (name, callback, args, exports) {
                 return callback.apply(exports, args);
-            },
-
-            /**
-             * callback for script loads, used to check status of loading.
-             *
-             * @param {Event} evt the event from the browser for the script
-             * that was loaded.
-             */
-            onScriptLoad: function (evt) {
-                //Using currentTarget instead of target for Firefox 2.0's sake. Not
-                //all old browsers will be supported, but this one was easy enough
-                //to support and still makes sense.
-                if (evt.type === 'load' ||
-                        (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
-                    //Reset interactive script so a script node is not held onto for
-                    //to long.
-                    interactiveScript = null;
-
-                    //Pull out the name of the module and the context.
-                    var data = getScriptData(evt);
-                    context.completeLoad(data.id);
-                }
-            },
-
-            /**
-             * Callback for script errors.
-             */
-            onScriptError: function (evt) {
-                var data = getScriptData(evt);
-                if (!hasPathFallback(data.id)) {
-                    var parents = [];
-                    eachProp(registry, function(value, key) {
-                        if (key.indexOf('_@r') !== 0) {
-                            each(value.depMaps, function(depMap) {
-                                if (depMap.id === data.id) {
-                                    parents.push(key);
-                                }
-                                return true;
-                            });
-                        }
-                    });
-                    // added by lwf 2016/07/16 begin
-                    if (parents.length == 0) {
-                        var module  = registry[data.id];
-                        if (module) {
-                            module = module.map && module.map.parentMap;
-                            parents.push(module.id+"("+module.url+")");
-                        }
-                    }
-                    console.error("scripterror:" + data.id + 
-                                  (parents.length ? '", needed by: ' + parents.join(', ') :'"'));
-                    // added by lwf 2016/07/16 end
-                    
-                    return onError(makeError('scripterror', 'Script error for "' + data.id +
-                                             (parents.length ?
-                                             '", needed by: ' + parents.join(', ') :
-                                             '"'), evt, [data.id]));
-                }
             }
+
         };
+
 
         context.require = context.makeRequire();
         return context;
@@ -1821,7 +1702,7 @@ var requirejs, require, define;
      * on a require that are not standardized), and to give a short
      * name for minification/local scope use.
      */
-    req = requirejs = function (deps, callback, errback, optional) {
+    req =  skyrt.require = function (deps, callback, errback, optional) {
 
         //Find the right context, use default
         var context, config,
@@ -1877,10 +1758,15 @@ var requirejs, require, define;
      * that have a better solution than setTimeout.
      * @param  {Function} fn function to execute later.
      */
+     req.nextTick = function(fn) { // added by liwenfeng 2023/09/30
+        return req._nextTick(fn);
+     }
+    /* 
+     // moved to browser/bootstrap.js and webworker/bootstrap.js by liwenfeng 2023/09/30
     req.nextTick = typeof setTimeout !== 'undefined' ? function (fn) {
         setTimeout(fn, 4);
     } : function (fn) { fn(); };
-
+    */
     /**
      * Export require as a global, but only if it does not already exist.
      */
@@ -1892,14 +1778,14 @@ var requirejs, require, define;
 
     //Used to filter out dependencies that are already paths.
     req.jsExtRegExp = /^\/|:|\?|\.js$/;
-    req.isBrowser = isBrowser;
+    ///req.isBrowser = isBrowser;
     s = req.s = {
         contexts: contexts,
         newContext: newContext
     };
 
-    //Create default context.
-    req({});
+    /////Create default context.
+    ////req({});
 
     //Exports some context-sensitive methods on global require.
     each([
@@ -1917,17 +1803,6 @@ var requirejs, require, define;
         };
     });
 
-    if (isBrowser) {
-        head = s.head = document.getElementsByTagName('head')[0];
-        //If BASE tag is in play, using appendChild is a problem for IE6.
-        //When that browser dies, this can be removed. Details in this jQuery bug:
-        //http://dev.jquery.com/ticket/2709
-        baseElement = document.getElementsByTagName('base')[0];
-        if (baseElement) {
-            head = s.head = baseElement.parentNode;
-        }
-    }
-
     /**
      * Any errors that require explicitly generates will be passed to this
      * function. Intercept/override it if you want custom error handling.
@@ -1936,8 +1811,8 @@ var requirejs, require, define;
     req.onError = defaultOnError;
 
     /**
-     * Creates the node for the load command. Only used in browser envs.
-     */
+     //* Creates the node for the load command. Only used in browser envs.
+     //  moved to browser.js byliwenfeng 2023/09/30
     req.createNode = function (config, moduleName, url) {
         var node = config.xhtml ?
                 document.createElementNS('http://www.w3.org/1999/xhtml', 'html:script') :
@@ -1947,6 +1822,7 @@ var requirejs, require, define;
         node.async = true;
         return node;
     };
+    */
 
     /**
      * Does the request to load a module for the browser case.
@@ -1971,6 +1847,10 @@ var requirejs, require, define;
             return;
         } 
         // added by liwenfeng 2016/01/22 end 
+
+        return req._load(context,moduleName,url,cached);  // added by liwenfeng 2023/09/30
+        /*
+         //moved to browser/req.js and webworker/req.js by liwenfeng 2023/09/30
        if (isBrowser) {
             //In the browser so use a script tag
             node = req.createNode(config, moduleName, url);
@@ -2057,7 +1937,31 @@ var requirejs, require, define;
                                 [moduleName]));
             }
         }
+        */
     };
+
+
+
+//sloppy since eval enclosed with use strict causes problems if the source
+//text is not strict-compliant.
+/*jslint sloppy: true, evil: true */
+/*global require, XMLHttpRequest */
+
+(function () {
+    var head, baseElement, dataMain, src,interactiveScript,currentlyAddingScript,mainScript,subPath;
+
+    head = document.getElementsByTagName('head')[0];
+    //If BASE tag is in play, using appendChild is a problem for IE6.
+    //When that browser dies, this can be removed. Details in this jQuery bug:
+    //http://dev.jquery.com/ticket/2709
+    baseElement = document.getElementsByTagName('base')[0];
+    if (baseElement) {
+        head = baseElement.parentNode;
+    }
+
+    function scripts() {
+        return document.getElementsByTagName('script');
+    }
 
     function getInteractiveScript() {
         if (interactiveScript && interactiveScript.readyState === 'interactive') {
@@ -2072,8 +1976,240 @@ var requirejs, require, define;
         return interactiveScript;
     }
 
+
+    // Separate function to avoid eval pollution, same with arguments use.
+    function exec() {
+        eval(arguments[0]);
+    }
+
+    var req = require;
+
+    // for sync require , by lwf
+    req.get = function(context, id, relMap, localRequire) {
+        context.intakeDefines(true);
+        return context.defined[makeModuleMap(id, relMap, false, true)];
+    };    
+
+    req._nextTick = function (fn) {
+        setTimeout(fn, 4);
+    };
+ 
+
+    function loadModuleByScriptTag(context,moduleName,url) {
+        const   readyRegExp =  navigator.platform === 'PLAYSTATION 3' ? /^complete$/ : /^(complete|loaded)$/;
+
+         //* Creates the node for the load command. Only used in browser envs.
+         function createNode(config, moduleName, url) {
+            var node = config.xhtml ?
+                    document.createElementNS('http://www.w3.org/1999/xhtml', 'html:script') :
+                    document.createElement('script');
+            node.type = config.scriptType || 'text/javascript';
+            node.charset = 'utf-8';
+            node.async = true;
+            return node;
+        }
+
+
+        function removeListener(node, func, name, ieName) {
+            //Favor detachEvent because of IE9
+            //issue, see attachEvent/addEventListener comment elsewhere
+            //in this file.
+            ///if (node.detachEvent && !isOpera) {
+            ///    //Probably IE. If not it will throw an error, which will be
+            ///    //useful to know.
+            ///    if (ieName) {
+            ///        node.detachEvent(ieName, func);
+            ///    }
+            ///} else {
+                node.removeEventListener(name, func, false);
+            ///}
+        }
+
+        /**
+         * Given an event from a script node, get the requirejs info from it,
+         * and then removes the event listeners on the node.
+         * @param {Event} evt
+         * @returns {Object}
+         */
+        function getScriptData(evt) {
+            //Using currentTarget instead of target for Firefox 2.0's sake. Not
+            //all old browsers will be supported, but this one was easy enough
+            //to support and still makes sense.
+            var node = evt.currentTarget || evt.srcElement;
+
+            //Remove the listeners once here.
+            removeListener(node, onScriptLoad, 'load', 'onreadystatechange');
+            removeListener(node, onScriptError, 'error');
+
+            return {
+                node: node,
+                id: node && node.getAttribute('data-requiremodule')
+            };
+        }
+
+
+        /**
+         * callback for script loads, used to check status of loading.
+         *
+         * @param {Event} evt the event from the browser for the script
+         * that was loaded.
+         */
+        function onScriptLoad(evt) {
+            //Using currentTarget instead of target for Firefox 2.0's sake. Not
+            //all old browsers will be supported, but this one was easy enough
+            //to support and still makes sense.
+            if (evt.type === 'load' ||
+                    (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
+                //Reset interactive script so a script node is not held onto for
+                //to long.
+                interactiveScript = null;
+
+                //Pull out the name of the module and the context.
+                var data = getScriptData(evt);
+                context.completeLoad(data.id);
+            }
+        }
+
+        /**
+         * Callback for script errors.
+         */
+        function onScriptError(evt) {
+            var data = getScriptData(evt);
+            if (!hasPathFallback(data.id)) {
+                var parents = [];
+                eachProp(registry, function(value, key) {
+                    if (key.indexOf('_@r') !== 0) {
+                        each(value.depMaps, function(depMap) {
+                            if (depMap.id === data.id) {
+                                parents.push(key);
+                            }
+                            return true;
+                        });
+                    }
+                });
+                // added by lwf 2016/07/16 begin
+                if (parents.length == 0) {
+                    var module  = registry[data.id];
+                    if (module) {
+                        module = module.map && module.map.parentMap;
+                        parents.push(module.id+"("+module.url+")");
+                    }
+                }
+                console.error("scripterror:" + data.id + 
+                              (parents.length ? '", needed by: ' + parents.join(', ') :'"'));
+                // added by lwf 2016/07/16 end
+                
+                return onError(makeError('scripterror', 'Script error for "' + data.id +
+                                         (parents.length ?
+                                         '", needed by: ' + parents.join(', ') :
+                                         '"'), evt, [data.id]));
+            }
+        }
+
+        var config = context.config;
+
+        //In the browser so use a script tag
+        node = createNode(config, moduleName, url);
+        if (config.onNodeCreated) {
+            config.onNodeCreated(node, config, moduleName, url);
+        }
+
+        node.setAttribute('data-requirecontext', context.contextName);
+        node.setAttribute('data-requiremodule', moduleName);
+
+        //Set up load listener. Test attachEvent first because IE9 has
+        //a subtle issue in its addEventListener and script onload firings
+        //that do not match the behavior of all other browsers with
+        //addEventListener support, which fire the onload event for a
+        //script right after the script execution. See:
+        //https://connect.microsoft.com/IE/feedback/details/648057/script-onload-event-is-not-fired-immediately-after-script-execution
+        //UNFORTUNATELY Opera implements attachEvent but does not follow the script
+        //script execution mode.
+        /*
+        if (node.attachEvent &&
+                //Check if node.attachEvent is artificially added by custom script or
+                //natively supported by browser
+                //read https://github.com/jrburke/requirejs/issues/187
+                //if we can NOT find [native code] then it must NOT natively supported.
+                //in IE8, node.attachEvent does not have toString()
+                //Note the test for "[native code" with no closing brace, see:
+                //https://github.com/jrburke/requirejs/issues/273
+                !(node.attachEvent.toString && node.attachEvent.toString().indexOf('[native code') < 0) &&
+                !isOpera) {
+            //Probably IE. IE (at least 6-8) do not fire
+            //script onload right after executing the script, so
+            //we cannot tie the anonymous define call to a name.
+            //However, IE reports the script as being in 'interactive'
+            //readyState at the time of the define call.
+            useInteractive = true;
+
+            node.attachEvent('onreadystatechange', context.onScriptLoad);
+            //It would be great to add an error handler here to catch
+            //404s in IE9+. However, onreadystatechange will fire before
+            //the error handler, so that does not help. If addEventListener
+            //is used, then IE will fire error before load, but we cannot
+            //use that pathway given the connect.microsoft.com issue
+            //mentioned above about not doing the 'script execute,
+            //then fire the script load event listener before execute
+            //next script' that other browsers do.
+            //Best hope: IE10 fixes the issues,
+            //and then destroys all installs of IE 6-9.
+            //node.attachEvent('onerror', context.onScriptError);
+        } else {
+
+            node.addEventListener('load', context.onScriptLoad, false);
+            node.addEventListener('error', context.onScriptError, false);
+        }
+        */
+        node.addEventListener('load', onScriptLoad, false);
+        node.addEventListener('error', onScriptError, false);
+        node.src = url;
+
+        //For some cache cases in IE 6-8, the script executes before the end
+        //of the appendChild execution, so to tie an anonymous define
+        //call to the module name (which is stored on the node), hold on
+        //to a reference to this node, but clear after the DOM insertion.
+        currentlyAddingScript = node;
+        if (baseElement) {
+            head.insertBefore(node, baseElement);
+        } else {
+            head.appendChild(node);
+        }
+        currentlyAddingScript = null;
+
+        return node;
+
+    }
+
+    function loadModuleByXhr(context,moduleName,url) {
+        var xhr = new XMLHttpRequest();
+
+        xhr.open('GET', url, true);
+        xhr.send();
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                exec(xhr.responseText);
+
+                //Support anonymous modules.
+                context.completeLoad(moduleName);
+            }
+        };
+    }
+
+    req._load = function (context, moduleName, url) {
+
+        if (context.config.loader=="xhr") {
+            return loadModuleByXhr(context,moduleName,url);
+        } else {
+            return loadModuleByScriptTag(context,moduleName,url);
+
+        }
+    };
+
+
     //Look for a data-main script attribute, which could also adjust the baseUrl.
-    if (isBrowser && !cfg.skipDataMain) {
+    if (!cfg.skipDataMain) {
         //Figure out baseUrl. Get it from the script tag with require.js in it.
         eachReverse(scripts(), function (script) {
             //Set the 'head' where we can append children by
@@ -2118,6 +2254,12 @@ var requirejs, require, define;
         });
     }
 
+}());
+
+   //Create default context.
+    req({});
+
+
     // modified by lwf
     /**
      * The function that handles definitions of modules. Differs from
@@ -2126,7 +2268,7 @@ var requirejs, require, define;
      * return a value to define the module corresponding to the first argument's
      * name.
      */ 
-    var _define = function (name, deps, callback) {
+    var _def = function (name, deps, callback) {
         var node, context;
 
         //Allow for anonymous modules
@@ -2169,15 +2311,15 @@ var requirejs, require, define;
 
         //If in IE 6-8 and hit an anonymous define() call, do the interactive
         //work.
-        if (useInteractive) {
-            node = currentlyAddingScript || getInteractiveScript();
-            if (node) {
-                if (!name) {
-                    name = node.getAttribute('data-requiremodule');
-                }
-                context = contexts[node.getAttribute('data-requirecontext')];
-            }
-        }
+        ///if (useInteractive) {
+        ///    node = currentlyAddingScript || getInteractiveScript();
+        ///    if (node) {
+        ///        if (!name) {
+        ///            name = node.getAttribute('data-requiremodule');
+        ///        }
+        ///        context = contexts[node.getAttribute('data-requirecontext')];
+        ///    }
+        ///}
 
         //Always save off evaluating the def call until the script onload handler.
         //This allows multiple modules to be in a file without prematurely
@@ -2185,18 +2327,18 @@ var requirejs, require, define;
         //where the module name is not known until the script onload event
         //occurs. If no context, use the global queue, and get it processed
         //in the onscript load callback.
-        if (context) {
-            context.defQueue.push([name, deps, callback]);
-            context.defQueueMap[name] = true;
-        } else {
+        ///if (context) {
+        ///    context.defQueue.push([name, deps, callback]);
+        ///    context.defQueueMap[name] = true;
+        ///} else {
             globalDefQueue.push([name, deps, callback]);
-        }
+        ///}
 
         return name;
     };
 
-    define = function (name, deps, callback) {
-        name = _define(name,deps,callback);
+    define = skyrt.define = function (name, deps, callback) {
+        name = _def(name,deps,callback);
         if (name && define.enable) {
             try {
                 require(name);
@@ -2223,6 +2365,10 @@ var requirejs, require, define;
         return eval(text);
     };
 
+
     //Set up with config info.
     req(cfg);
+
+
 }(this));
+
